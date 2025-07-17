@@ -1,188 +1,330 @@
-import { useState } from 'react';
-import { ArrowLeft, Key, Bot, User, Save } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Settings, Key, Cpu, Save, ArrowLeft } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Link, useNavigate } from 'react-router-dom';
 
-interface SettingsPageProps {
-  onBack: () => void;
+interface Model {
+  id: string;
+  name: string;
+  provider: string;
+  context_length: number;
 }
 
-export function SettingsPage({ onBack }: SettingsPageProps) {
+export const SettingsPage = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const [apiKey, setApiKey] = useState('');
-  const [profileName, setProfileName] = useState('');
-  const [profileEmail, setProfileEmail] = useState('');
+  const [models, setModels] = useState<Model[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSaveSettings = () => {
-    // TODO: Save settings to Supabase
-    console.log('Saving settings...');
+  useEffect(() => {
+    if (user) {
+      loadUserProfile();
+      loadAvailableModels();
+    }
+  }, [user]);
+
+  const loadUserProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('openrouter_api_key')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading profile:', error);
+        return;
+      }
+
+      if (data?.openrouter_api_key) {
+        setApiKey(data.openrouter_api_key);
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
+
+  const loadAvailableModels = async () => {
+    // Mock data for now - in a real app, this would fetch from OpenRouter API
+    const mockModels: Model[] = [
+      {
+        id: 'openai/gpt-4o-mini',
+        name: 'GPT-4o Mini',
+        provider: 'OpenAI',
+        context_length: 128000
+      },
+      {
+        id: 'openai/gpt-4o',
+        name: 'GPT-4o',
+        provider: 'OpenAI',
+        context_length: 128000
+      },
+      {
+        id: 'anthropic/claude-3.5-sonnet',
+        name: 'Claude 3.5 Sonnet',
+        provider: 'Anthropic',
+        context_length: 200000
+      },
+      {
+        id: 'meta-llama/llama-3.1-70b-instruct',
+        name: 'Llama 3.1 70B',
+        provider: 'Meta',
+        context_length: 131072
+      }
+    ];
+    setModels(mockModels);
+  };
+
+  const saveApiKey = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          openrouter_api_key: apiKey
+        });
+
+      if (error) {
+        console.error('Error saving API key:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save API key. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: "OpenRouter API key saved successfully!",
+      });
+    } catch (error) {
+      console.error('Error saving API key:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save API key. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const testApiKey = async () => {
+    if (!apiKey) {
+      toast({
+        title: "Error",
+        description: "Please enter an API key first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: "Success",
+          description: `API key is valid! Found ${data.data?.length || 0} available models.`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Invalid API key. Please check and try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error testing API key:', error);
+      toast({
+        title: "Error",
+        description: "Failed to test API key. Please check your connection.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatContextLength = (length: number) => {
+    if (length >= 1000000) {
+      return `${(length / 1000000).toFixed(1)}M`;
+    } else if (length >= 1000) {
+      return `${(length / 1000).toFixed(0)}K`;
+    }
+    return length.toString();
   };
 
   return (
     <div className="min-h-screen bg-gradient-background">
-      <div className="max-w-4xl mx-auto p-6">
-        {/* Header */}
+      <div className="container mx-auto p-6 max-w-4xl">
+        {/* Header with back button */}
         <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="hover:bg-muted"
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate('/')}
+            className="hover:bg-primary/10"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-4 w-4 mr-1" />
             Back to Chat
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-            <p className="text-muted-foreground">Manage your account and preferences</p>
+          <div className="flex items-center gap-3">
+            <Settings className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold">Settings</h1>
+              <p className="text-muted-foreground">Manage your OpenRouter API key and model preferences</p>
+            </div>
           </div>
         </div>
 
-        <Tabs defaultValue="api" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-muted">
-            <TabsTrigger value="api" className="flex items-center gap-2">
-              <Key className="h-4 w-4" />
-              API Configuration
-            </TabsTrigger>
-            <TabsTrigger value="models" className="flex items-center gap-2">
-              <Bot className="h-4 w-4" />
-              Models
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Profile
-            </TabsTrigger>
-          </TabsList>
-
-          {/* API Configuration */}
-          <TabsContent value="api" className="space-y-6">
-            <Card className="bg-gradient-card border-border">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Key className="h-5 w-5 text-primary" />
-                  OpenRouter API Key
-                </CardTitle>
-                <CardDescription>
-                  Connect your OpenRouter account to access multiple AI models
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="api-key">API Key</Label>
-                  <Input
-                    id="api-key"
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="sk-or-..."
-                    className="bg-input border-border"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Your API key is stored securely and never shared with third parties.
-                  </p>
-                </div>
-                
-                <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
-                  <p className="text-sm text-foreground">
-                    <strong>Need an API key?</strong> Visit{' '}
-                    <a 
-                      href="https://openrouter.ai" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      OpenRouter.ai
-                    </a>{' '}
-                    to create an account and get your API key.
-                  </p>
-                </div>
-
-                <Button onClick={handleSaveSettings} className="bg-gradient-primary hover:shadow-glow">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save API Key
+        <div className="space-y-6">
+          {/* API Key Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="h-5 w-5" />
+                OpenRouter API Key
+              </CardTitle>
+              <CardDescription>
+                Enter your OpenRouter API key to access AI models. You can get one from{' '}
+                <a 
+                  href="https://openrouter.ai/keys" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  OpenRouter.ai
+                </a>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="api-key">API Key</Label>
+                <Input
+                  id="api-key"
+                  type="password"
+                  placeholder="sk-or-..."
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="font-mono"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={saveApiKey} 
+                  disabled={isSaving || !apiKey}
+                  className="flex items-center gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  {isSaving ? 'Saving...' : 'Save API Key'}
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Models */}
-          <TabsContent value="models" className="space-y-6">
-            <Card className="bg-gradient-card border-border">
-              <CardHeader>
-                <CardTitle>Available Models</CardTitle>
-                <CardDescription>
-                  Manage the AI models available in your chat interface
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="text-sm text-muted-foreground">
-                    Connect to Supabase to customize your model selection and add new models to the dropdown.
-                  </div>
-                  
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="text-sm text-foreground">
-                      🚀 <strong>Coming Soon:</strong> Custom model management, model preferences, and advanced configuration options.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Profile */}
-          <TabsContent value="profile" className="space-y-6">
-            <Card className="bg-gradient-card border-border">
-              <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>
-                  Update your personal information and preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="profile-name">Display Name</Label>
-                    <Input
-                      id="profile-name"
-                      value={profileName}
-                      onChange={(e) => setProfileName(e.target.value)}
-                      placeholder="Your name"
-                      className="bg-input border-border"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="profile-email">Email</Label>
-                    <Input
-                      id="profile-email"
-                      type="email"
-                      value={profileEmail}
-                      onChange={(e) => setProfileEmail(e.target.value)}
-                      placeholder="your.email@example.com"
-                      className="bg-input border-border"
-                    />
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-foreground">
-                    💡 <strong>Connect to Supabase</strong> to enable user authentication, profile management, and data persistence across devices.
-                  </p>
-                </div>
-
-                <Button onClick={handleSaveSettings} className="bg-gradient-primary hover:shadow-glow">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Profile
+                <Button 
+                  variant="outline" 
+                  onClick={testApiKey} 
+                  disabled={isLoading || !apiKey}
+                >
+                  {isLoading ? 'Testing...' : 'Test Connection'}
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Separator />
+
+          {/* Available Models Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Cpu className="h-5 w-5" />
+                Available Models
+              </CardTitle>
+              <CardDescription>
+                Popular models available through OpenRouter
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3">
+                {models.map((model) => (
+                  <div 
+                    key={model.id} 
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-medium">{model.name}</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {model.provider}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Context: {formatContextLength(model.context_length)} tokens
+                      </p>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {model.id}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Usage Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Usage Information</CardTitle>
+              <CardDescription>
+                How to use OpenRouter with this chat application
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-medium mb-2">Getting Started</h4>
+                <ol className="list-decimal list-inside space-y-1 text-sm">
+                  <li>Sign up for an account at <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">OpenRouter.ai</a></li>
+                  <li>Generate an API key from your <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">API Keys page</a></li>
+                  <li>Enter your API key above and save it</li>
+                  <li>Start chatting with any of the available AI models</li>
+                </ol>
+              </div>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-medium mb-2">Pricing</h4>
+                <p className="text-sm">
+                  OpenRouter uses a pay-per-use model. You'll only be charged for what you use, 
+                  with transparent pricing per token. Check their{' '}
+                  <a href="https://openrouter.ai/docs#models" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    pricing page
+                  </a>{' '}
+                  for current rates.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
-}
+};

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, MessageSquare, Settings, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Link } from 'react-router-dom';
 
 interface Thread {
   id: string;
@@ -135,10 +136,12 @@ export function Sidebar({ isOpen, onToggle, selectedThread, onSelectThread, onNe
           <Button
             variant="ghost"
             className="w-full justify-start hover:bg-primary/10"
-            onClick={() => {/* Navigate to settings */}}
+            asChild
           >
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
+            <Link to="/settings">
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </Link>
           </Button>
         </div>
       </div>
