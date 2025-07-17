@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { AuthForm } from '@/components/AuthForm';
 import { Sidebar } from '@/components/Sidebar';
 import { ChatArea } from '@/components/ChatArea';
 
 const Index = () => {
+  const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedThread, setSelectedThread] = useState<string | null>('1');
 
@@ -17,6 +20,18 @@ const Index = () => {
     setSelectedThread(null);
     setSidebarOpen(false);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthForm />;
+  }
 
   return (
     <div className="flex h-screen bg-gradient-background overflow-hidden">
