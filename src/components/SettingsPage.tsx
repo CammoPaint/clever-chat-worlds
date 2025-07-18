@@ -96,6 +96,8 @@ export const SettingsPage = () => {
         .upsert({
           user_id: user.id,
           openrouter_api_key: apiKey
+        }, {
+          onConflict: 'user_id'
         });
 
       if (error) {
