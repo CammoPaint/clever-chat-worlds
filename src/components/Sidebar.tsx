@@ -1,47 +1,21 @@
-import { useState } from 'react';
-import { Plus, MessageSquare, Settings, Menu, X } from 'lucide-react';
+import { Plus, MessageSquare, Settings, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Link } from 'react-router-dom';
-
-interface Thread {
-  id: string;
-  title: string;
-  lastMessage?: string;
-  timestamp: Date;
-}
+import { type Thread } from '@/hooks/useThreads';
 
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
-  selectedThread: string | null;
-  onSelectThread: (threadId: string) => void;
+  threads: Thread[];
+  currentThread: Thread | null;
+  onSelectThread: (thread: Thread) => void;
   onNewThread: () => void;
 }
 
-export function Sidebar({ isOpen, onToggle, selectedThread, onSelectThread, onNewThread }: SidebarProps) {
-  const [threads] = useState<Thread[]>([
-    {
-      id: '1',
-      title: 'Getting started with OpenRouter',
-      lastMessage: 'How do I use multiple models?',
-      timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
-    },
-    {
-      id: '2', 
-      title: 'Code review assistance',
-      lastMessage: 'Can you help me optimize this function?',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
-    },
-    {
-      id: '3',
-      title: 'Creative writing project',
-      lastMessage: 'I need help with character development',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    },
-  ]);
-
-  const formatTime = (date: Date) => {
+export function Sidebar({ isOpen, onToggle, threads, currentThread, onSelectThread, onNewThread }: SidebarProps) {
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
@@ -97,37 +71,40 @@ export function Sidebar({ isOpen, onToggle, selectedThread, onSelectThread, onNe
         {/* Threads list */}
         <ScrollArea className="flex-1 px-2 py-4">
           <div className="space-y-2">
-            {threads.map((thread) => (
-              <button
-                key={thread.id}
-                onClick={() => onSelectThread(thread.id)}
-                className={`
-                  w-full p-3 rounded-lg text-left transition-all duration-200
-                  hover:bg-primary/10 group animate-fade-in
-                  ${selectedThread === thread.id 
-                    ? 'bg-primary/20 border border-primary/30' 
-                    : 'hover:bg-muted/50'
-                  }
-                `}
-              >
-                <div className="flex items-start gap-3">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-foreground truncate">
-                      {thread.title}
-                    </div>
-                    {thread.lastMessage && (
-                      <div className="text-sm text-muted-foreground truncate mt-1">
-                        {thread.lastMessage}
+            {threads.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No conversations yet</p>
+                <p className="text-xs">Click the + button to start chatting</p>
+              </div>
+            ) : (
+              threads.map((thread) => (
+                <button
+                  key={thread.id}
+                  onClick={() => onSelectThread(thread)}
+                  className={`
+                    w-full p-3 rounded-lg text-left transition-all duration-200
+                    hover:bg-primary/10 group animate-fade-in
+                    ${currentThread?.id === thread.id 
+                      ? 'bg-primary/20 border border-primary/30' 
+                      : 'hover:bg-muted/50'
+                    }
+                  `}
+                >
+                  <div className="flex items-start gap-3">
+                    <MessageSquare className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-foreground truncate">
+                        {thread.title}
                       </div>
-                    )}
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {formatTime(thread.timestamp)}
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {formatTime(thread.updated_at)}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))
+            )}
           </div>
         </ScrollArea>
 

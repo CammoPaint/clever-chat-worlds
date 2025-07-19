@@ -3,21 +3,25 @@ import { useAuth } from '@/hooks/useAuth';
 import { AuthForm } from '@/components/AuthForm';
 import { Sidebar } from '@/components/Sidebar';
 import { ChatArea } from '@/components/ChatArea';
+import { useThreads, type Thread } from '@/hooks/useThreads';
 
 const Index = () => {
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedThread, setSelectedThread] = useState<string | null>('1');
+  const { threads, currentThread, setCurrentThread, createThread, loadThreads } = useThreads();
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   
-  const handleSelectThread = (threadId: string) => {
-    setSelectedThread(threadId);
+  const handleSelectThread = (thread: Thread) => {
+    setCurrentThread(thread);
     setSidebarOpen(false); // Close sidebar on mobile after selection
   };
 
-  const handleNewThread = () => {
-    setSelectedThread(null);
+  const handleNewThread = async () => {
+    const newThread = await createThread();
+    if (newThread) {
+      setCurrentThread(newThread);
+    }
     setSidebarOpen(false);
   };
 
@@ -38,7 +42,8 @@ const Index = () => {
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={toggleSidebar}
-        selectedThread={selectedThread}
+        threads={threads}
+        currentThread={currentThread}
         onSelectThread={handleSelectThread}
         onNewThread={handleNewThread}
       />
@@ -46,7 +51,8 @@ const Index = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <ChatArea 
           onToggleSidebar={toggleSidebar}
-          threadTitle={selectedThread ? 'Getting started with OpenRouter' : 'New Conversation'}
+          currentThread={currentThread}
+          onThreadUpdate={loadThreads}
         />
       </div>
     </div>

@@ -12,33 +12,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useOpenRouter } from '@/hooks/useOpenRouter';
+import { useMessages, type Message } from '@/hooks/useMessages';
+import { useThreads, type Thread } from '@/hooks/useThreads';
 import { toast } from 'sonner';
-
-interface Message {
-  id: string;
-  content: string;
-  sender: 'user' | 'assistant';
-  timestamp: Date;
-  model?: string;
-}
 
 interface ChatAreaProps {
   onToggleSidebar: () => void;
-  threadTitle?: string;
+  currentThread?: Thread | null;
+  onThreadUpdate?: () => void;
 }
 
-export function ChatArea({ onToggleSidebar, threadTitle = 'New Conversation' }: ChatAreaProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: "Hello! I'm your AI assistant powered by OpenRouter. I can help you with a wide variety of tasks. What would you like to work on today?",
-      sender: 'assistant',
-      timestamp: new Date(Date.now() - 1000 * 60 * 2),
-      model: 'OpenRouter',
-    },
-  ]);
+export function ChatArea({ onToggleSidebar, currentThread, onThreadUpdate }: ChatAreaProps) {
   const [selectedModel, setSelectedModel] = useState('openai/gpt-4-turbo');
   const { sendMessage: sendOpenRouterMessage, isLoading } = useOpenRouter();
+  const { messages, saveMessage } = useMessages(currentThread?.id || null);
+  const { updateThread } = useThreads();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -55,20 +43,18 @@ export function ChatArea({ onToggleSidebar, threadTitle = 'New Conversation' }: 
   }, [messages]);
 
   const handleSendMessage = async (content: string) => {
-    // Add user message
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
+    if (!currentThread) {
+      toast.error('Please select or create a conversation first');
+      return;
+    }
 
     try {
+      // Save user message to database
+      await saveMessage(content, 'user');
+
       // Convert messages to OpenRouter format
       const chatHistory = messages.map(msg => ({
-        role: msg.sender === 'user' ? 'user' as const : 'assistant' as const,
+        role: msg.role,
         content: msg.content
       }));
       
@@ -81,26 +67,20 @@ export function ChatArea({ onToggleSidebar, threadTitle = 'New Conversation' }: 
       // Get AI response
       const responseContent = await sendOpenRouterMessage(chatHistory, selectedModel);
       
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: responseContent,
-        sender: 'assistant',
-        timestamp: new Date(),
-        model: selectedModel,
-      };
+      // Save AI response to database
+      await saveMessage(responseContent, 'assistant', selectedModel);
       
-      setMessages(prev => [...prev, aiResponse]);
+      // Update thread's updated_at timestamp
+      await updateThread(currentThread.id, { updated_at: new Date().toISOString() });
+      onThreadUpdate?.();
     } catch (error) {
       console.error('Error sending message:', error);
-      // Show error message in chat
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "Sorry, I encountered an error. Please check that your OpenRouter API key is configured correctly in Settings.",
-        sender: 'assistant',
-        timestamp: new Date(),
-        model: selectedModel,
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      // Save error message to database for user to see
+      await saveMessage(
+        "Sorry, I encountered an error. Please check that your OpenRouter API key is configured correctly in Settings.",
+        'assistant',
+        selectedModel
+      );
     }
   };
 
@@ -121,7 +101,7 @@ export function ChatArea({ onToggleSidebar, threadTitle = 'New Conversation' }: 
           </Button>
           
           <div>
-            <h1 className="font-semibold text-foreground">{threadTitle}</h1>
+            <h1 className="font-semibold text-foreground">{currentThread?.title || 'New Conversation'}</h1>
             <p className="text-sm text-muted-foreground">
               {messages.length} messages
             </p>
@@ -192,7 +172,16 @@ export function ChatArea({ onToggleSidebar, threadTitle = 'New Conversation' }: 
           ) : (
             <div className="group">
               {messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
+                <ChatMessage 
+                  key={message.id} 
+                  message={{
+                    id: message.id,
+                    content: message.content,
+                    sender: message.role,
+                    timestamp: new Date(message.created_at),
+                    model: message.model_id
+                  }} 
+                />
               ))}
               
               {isLoading && (
