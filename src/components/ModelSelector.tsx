@@ -25,15 +25,23 @@ interface ModelSelectorProps {
 
 const models: Model[] = [
   {
-    id: 'gpt-4',
-    name: 'GPT-4',
+    id: 'openai/gpt-4-turbo',
+    name: 'GPT-4 Turbo',
     provider: 'OpenAI',
     description: 'Most capable model for complex tasks',
     icon: <Sparkles className="h-4 w-4" />,
     tier: 'premium',
   },
   {
-    id: 'claude-3-sonnet',
+    id: 'anthropic/claude-3-opus',
+    name: 'Claude 3 Opus',
+    provider: 'Anthropic',
+    description: 'Top reasoning and creative writing',
+    icon: <Brain className="h-4 w-4" />,
+    tier: 'premium',
+  },
+  {
+    id: 'anthropic/claude-3-sonnet',
     name: 'Claude 3 Sonnet',
     provider: 'Anthropic',
     description: 'Balanced model for reasoning and creativity',
@@ -41,7 +49,7 @@ const models: Model[] = [
     tier: 'premium',
   },
   {
-    id: 'gpt-3.5-turbo',
+    id: 'openai/gpt-3.5-turbo',
     name: 'GPT-3.5 Turbo',
     provider: 'OpenAI',
     description: 'Fast and efficient for most tasks',
@@ -49,12 +57,20 @@ const models: Model[] = [
     tier: 'free',
   },
   {
-    id: 'perplexity-large',
-    name: 'Perplexity Large',
-    provider: 'Perplexity',
-    description: 'Great for research and real-time info',
+    id: 'google/gemini-pro',
+    name: 'Gemini Pro',
+    provider: 'Google',
+    description: 'Google\'s advanced language model',
     icon: <Star className="h-4 w-4" />,
     tier: 'premium',
+  },
+  {
+    id: 'meta-llama/llama-2-70b-chat',
+    name: 'Llama 2 70B Chat',
+    provider: 'Meta',
+    description: 'Open-source model with strong capabilities',
+    icon: <Zap className="h-4 w-4" />,
+    tier: 'free',
   },
 ];
 

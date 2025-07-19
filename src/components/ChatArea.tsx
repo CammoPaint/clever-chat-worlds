@@ -11,6 +11,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useOpenRouter } from '@/hooks/useOpenRouter';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -29,14 +31,14 @@ export function ChatArea({ onToggleSidebar, threadTitle = 'New Conversation' }: 
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "Hello! I'm your AI assistant. I can help you with a wide variety of tasks. What would you like to work on today?",
+      content: "Hello! I'm your AI assistant powered by OpenRouter. I can help you with a wide variety of tasks. What would you like to work on today?",
       sender: 'assistant',
       timestamp: new Date(Date.now() - 1000 * 60 * 2),
-      model: 'GPT-4',
+      model: 'OpenRouter',
     },
   ]);
-  const [selectedModel, setSelectedModel] = useState('gpt-4');
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('openai/gpt-4-turbo');
+  const { sendMessage: sendOpenRouterMessage, isLoading } = useOpenRouter();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -62,21 +64,44 @@ export function ChatArea({ onToggleSidebar, threadTitle = 'New Conversation' }: 
     };
     
     setMessages(prev => [...prev, userMessage]);
-    setIsLoading(true);
 
-    // Simulate AI response (replace with actual API call)
-    setTimeout(() => {
+    try {
+      // Convert messages to OpenRouter format
+      const chatHistory = messages.map(msg => ({
+        role: msg.sender === 'user' ? 'user' as const : 'assistant' as const,
+        content: msg.content
+      }));
+      
+      // Add the new user message
+      chatHistory.push({
+        role: 'user' as const,
+        content
+      });
+
+      // Get AI response
+      const responseContent = await sendOpenRouterMessage(chatHistory, selectedModel);
+      
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: "I understand your message. This is a simulated response. Once you connect to Supabase and add your OpenRouter API key, I'll be able to provide real AI responses using the selected model!",
+        content: responseContent,
         sender: 'assistant',
         timestamp: new Date(),
         model: selectedModel,
       };
       
       setMessages(prev => [...prev, aiResponse]);
-      setIsLoading(false);
-    }, 1500);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Show error message in chat
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "Sorry, I encountered an error. Please check that your OpenRouter API key is configured correctly in Settings.",
+        sender: 'assistant',
+        timestamp: new Date(),
+        model: selectedModel,
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
   };
 
   const isEmpty = messages.length === 0;
