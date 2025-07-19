@@ -9,11 +9,9 @@ interface OpenRouterMessage {
 }
 
 interface OpenRouterResponse {
-  choices: Array<{
-    message: {
-      content: string;
-    };
-  }>;
+  content: string;
+  model?: string;
+  usage?: any;
 }
 
 export function useOpenRouter() {
@@ -31,49 +29,36 @@ export function useOpenRouter() {
     setIsLoading(true);
     
     try {
-      // Get user's API key
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('openrouter_api_key')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profileError || !profile?.openrouter_api_key) {
-        throw new Error('OpenRouter API key not found. Please add it in Settings.');
-      }
-
-      // Call OpenRouter API
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${profile.openrouter_api_key}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Chat Worlds'
-        },
-        body: JSON.stringify({
-          model,
+      console.log('Calling OpenRouter Edge Function with messages:', messages.length, 'model:', model);
+      
+      // Call the Supabase Edge Function instead of OpenRouter directly
+      const { data, error } = await supabase.functions.invoke('openrouter-chat', {
+        body: {
           messages,
-          temperature: 0.7,
-          max_tokens: 2000
-        })
+          model
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('OpenRouter API error:', errorData);
-        throw new Error(`OpenRouter API error: ${response.status}`);
+      if (error) {
+        console.error('Edge Function error:', error);
+        throw new Error(error.message || 'Failed to get AI response');
       }
 
-      const data: OpenRouterResponse = await response.json();
+      if (!data) {
+        throw new Error('No response from AI service');
+      }
+
+      const response = data as OpenRouterResponse;
       
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        throw new Error('Invalid response from OpenRouter API');
+      if (!response.content) {
+        throw new Error('Invalid response from AI service');
       }
 
-      return data.choices[0].message.content;
+      console.log('OpenRouter response received via Edge Function');
+      return response.content;
+      
     } catch (error) {
-      console.error('Error calling OpenRouter:', error);
+      console.error('Error calling OpenRouter via Edge Function:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to get AI response');
       throw error;
     } finally {
