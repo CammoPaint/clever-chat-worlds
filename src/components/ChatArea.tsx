@@ -4,6 +4,7 @@ import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ModelSelector } from './ModelSelector';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Menu, MoreVertical, Trash2, Edit2 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -11,6 +12,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useOpenRouter } from '@/hooks/useOpenRouter';
 import { useMessages, type Message } from '@/hooks/useMessages';
 import { useThreads, type Thread } from '@/hooks/useThreads';
@@ -24,9 +43,12 @@ interface ChatAreaProps {
 
 export function ChatArea({ onToggleSidebar, currentThread, onThreadUpdate }: ChatAreaProps) {
   const [selectedModel, setSelectedModel] = useState('openai/gpt-4-turbo');
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [newThreadTitle, setNewThreadTitle] = useState('');
   const { sendMessage: sendOpenRouterMessage, isLoading } = useOpenRouter();
   const { messages, saveMessage } = useMessages(currentThread?.id || null);
-  const { updateThread } = useThreads();
+  const { updateThread, deleteThread } = useThreads();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -41,6 +63,33 @@ export function ChatArea({ onToggleSidebar, currentThread, onThreadUpdate }: Cha
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleRenameThread = () => {
+    if (!currentThread) return;
+    setNewThreadTitle(currentThread.title);
+    setShowRenameDialog(true);
+  };
+
+  const handleDeleteThread = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const confirmRename = async () => {
+    if (!currentThread || !newThreadTitle.trim()) return;
+    
+    await updateThread(currentThread.id, { title: newThreadTitle.trim() });
+    setShowRenameDialog(false);
+    setNewThreadTitle('');
+    onThreadUpdate?.();
+  };
+
+  const confirmDelete = async () => {
+    if (!currentThread) return;
+    
+    await deleteThread(currentThread.id);
+    setShowDeleteDialog(false);
+    onThreadUpdate?.();
+  };
 
   const handleSendMessage = async (content: string) => {
     if (!currentThread) {
@@ -121,11 +170,11 @@ export function ChatArea({ onToggleSidebar, currentThread, onThreadUpdate }: Cha
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-popover border-border">
-              <DropdownMenuItem className="hover:bg-muted">
+              <DropdownMenuItem onClick={handleRenameThread} className="hover:bg-muted">
                 <Edit2 className="h-4 w-4 mr-2" />
                 Rename Thread
               </DropdownMenuItem>
-              <DropdownMenuItem className="hover:bg-muted text-destructive">
+              <DropdownMenuItem onClick={handleDeleteThread} className="hover:bg-muted text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete Thread
               </DropdownMenuItem>
@@ -212,6 +261,58 @@ export function ChatArea({ onToggleSidebar, currentThread, onThreadUpdate }: Cha
         onSendMessage={handleSendMessage} 
         isLoading={isLoading}
       />
+
+      {/* Rename Thread Dialog */}
+      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Rename Conversation</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Enter a new name for this conversation.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={newThreadTitle}
+            onChange={(e) => setNewThreadTitle(e.target.value)}
+            placeholder="Conversation name"
+            className="mt-4"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                confirmRename();
+              }
+            }}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRenameDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmRename} disabled={!newThreadTitle.trim()}>
+              Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Thread Confirmation */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">Delete Conversation</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Are you sure you want to delete "{currentThread?.title}"? This action cannot be undone and all messages in this conversation will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
