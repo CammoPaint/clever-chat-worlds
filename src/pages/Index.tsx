@@ -25,6 +25,17 @@ const Index = () => {
     setSidebarOpen(false);
   };
 
+  const handleThreadUpdate = () => {
+    loadThreads();
+    // Update current thread if it exists to reflect any changes
+    if (currentThread) {
+      const updatedThread = threads.find(t => t.id === currentThread.id);
+      if (updatedThread) {
+        setCurrentThread(updatedThread);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-background">
@@ -52,7 +63,7 @@ const Index = () => {
         <ChatArea 
           onToggleSidebar={toggleSidebar}
           currentThread={currentThread}
-          onThreadUpdate={loadThreads}
+          onThreadUpdate={handleThreadUpdate}
         />
       </div>
     </div>
