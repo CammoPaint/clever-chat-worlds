@@ -26,14 +26,9 @@ const Index = () => {
   };
 
   const handleThreadUpdate = () => {
+    // The useThreads hook already handles updating currentThread state
+    // when updateThread is called, so we just need to reload the threads list
     loadThreads();
-    // Update current thread if it exists to reflect any changes
-    if (currentThread) {
-      const updatedThread = threads.find(t => t.id === currentThread.id);
-      if (updatedThread) {
-        setCurrentThread(updatedThread);
-      }
-    }
   };
 
   if (loading) {
