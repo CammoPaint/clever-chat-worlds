@@ -59,6 +59,8 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- Supabase
+- OpenRouter
 
 ## How can I deploy this project?
 
@@ -71,3 +73,13 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Getting an OpenRouter API Key
+
+This project uses OpenRouter to access various AI models. To set up your API key:
+
+1. Visit [OpenRouter](https://openrouter.ai/) and create an account
+2. Navigate to the [API Keys page](https://openrouter.ai/keys) in your dashboard
+3. Create a new API key
+4. In this project, the API key is configured through Supabase Edge Function secrets for security
+5. The API key will be automatically used when making requests to OpenRouter models
