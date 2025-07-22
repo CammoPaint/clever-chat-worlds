@@ -2,7 +2,7 @@
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/64065509-ec2e-4861-863f-aadb553cf7e0
+**URL**: https://clever-chat-worlds.lovable.app/
 
 ## How can I edit this code?
 
