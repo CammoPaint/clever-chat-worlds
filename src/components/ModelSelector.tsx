@@ -65,10 +65,10 @@ const models: Model[] = [
     tier: 'premium',
   },
   {
-    id: 'meta-llama/llama-2-70b-chat',
-    name: 'Llama 2 70B Chat',
+    id: 'meta-llama/llama-3.3-70b-instruct',
+    name: 'Llama 3.3 70B Instruct',
     provider: 'Meta',
-    description: 'Open-source model with strong capabilities',
+    description: 'Latest open-source model with strong capabilities',
     icon: <Zap className="h-4 w-4" />,
     tier: 'free',
   },
