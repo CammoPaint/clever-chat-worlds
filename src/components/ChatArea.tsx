@@ -77,10 +77,17 @@ export function ChatArea({ onToggleSidebar, currentThread, onThreadUpdate }: Cha
   const confirmRename = async () => {
     if (!currentThread || !newThreadTitle.trim()) return;
     
-    await updateThread(currentThread.id, { title: newThreadTitle.trim() });
-    setShowRenameDialog(false);
-    setNewThreadTitle('');
-    onThreadUpdate?.();
+    console.log('Renaming thread:', currentThread.id, 'to:', newThreadTitle.trim());
+    try {
+      await updateThread(currentThread.id, { title: newThreadTitle.trim() });
+      console.log('Thread renamed successfully');
+      setShowRenameDialog(false);
+      setNewThreadTitle('');
+      onThreadUpdate?.();
+    } catch (error) {
+      console.error('Error renaming thread:', error);
+      toast.error('Failed to rename conversation');
+    }
   };
 
   const confirmDelete = async () => {
