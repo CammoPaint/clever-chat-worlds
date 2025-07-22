@@ -57,8 +57,8 @@ const models: Model[] = [
     tier: 'free',
   },
   {
-    id: 'google/gemini-pro',
-    name: 'Gemini Pro',
+    id: 'google/gemini-pro-1.5',
+    name: 'Gemini Pro 1.5',
     provider: 'Google',
     description: 'Google\'s advanced language model',
     icon: <Star className="h-4 w-4" />,
