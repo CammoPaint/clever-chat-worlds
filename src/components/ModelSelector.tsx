@@ -1,4 +1,4 @@
-import { ChevronDown, Sparkles, Brain, Zap, Star } from 'lucide-react';
+import { ChevronDown, Sparkles, Brain, Zap, Star, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -8,6 +8,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
+import { useCustomModels } from '@/hooks/useCustomModels';
+import { AddCustomModelDialog } from './AddCustomModelDialog';
 
 interface Model {
   id: string;
@@ -101,7 +103,24 @@ const getTierBadge = (tier: string) => {
 };
 
 export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorProps) {
-  const currentModel = models.find(m => m.id === selectedModel) || models[0];
+  const { customModels, deleteCustomModel } = useCustomModels();
+  
+  // Combine built-in models with custom models
+  const allModels = [
+    ...models,
+    ...customModels.map(model => ({
+      id: model.model_id,
+      name: model.name,
+      provider: model.provider,
+      description: model.description || 'Custom model',
+      icon: <Star className="h-4 w-4" />,
+      tier: 'free' as const,
+      isCustom: true,
+      customId: model.id,
+    }))
+  ];
+  
+  const currentModel = allModels.find(m => m.id === selectedModel) || allModels[0];
 
   return (
     <DropdownMenu>
@@ -131,7 +150,7 @@ export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorPro
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
-        {models.map((model) => (
+        {allModels.map((model) => (
           <DropdownMenuItem
             key={model.id}
             onClick={() => onModelChange(model.id)}
@@ -150,23 +169,49 @@ export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorPro
                   <span className={`text-xs px-1.5 py-0.5 rounded ${getTierColor(model.tier)}`}>
                     {getTierBadge(model.tier)}
                   </span>
+                  {(model as any).isCustom && (
+                    <span className="text-xs text-muted-foreground">Custom</span>
+                  )}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {model.provider} • {model.description}
                 </div>
               </div>
-              {selectedModel === model.id && (
-                <div className="w-2 h-2 bg-primary rounded-full mt-2" />
-              )}
+              <div className="flex items-center gap-2">
+                {selectedModel === model.id && (
+                  <div className="w-2 h-2 bg-primary rounded-full" />
+                )}
+                {(model as any).isCustom && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-70 hover:opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteCustomModel((model as any).customId);
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             </div>
           </DropdownMenuItem>
         ))}
         
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-muted-foreground cursor-pointer hover:bg-muted/50">
-          <Sparkles className="h-4 w-4 mr-2" />
-          Add Custom Model
-        </DropdownMenuItem>
+        {customModels.length > 0 && <DropdownMenuSeparator />}
+        
+        <AddCustomModelDialog
+          trigger={
+            <DropdownMenuItem 
+              className="text-muted-foreground cursor-pointer hover:bg-muted/50"
+              onSelect={(e) => e.preventDefault()}
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              Add Custom Model
+            </DropdownMenuItem>
+          }
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );

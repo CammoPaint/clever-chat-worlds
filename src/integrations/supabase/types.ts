@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      custom_models: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          model_id: string
+          name: string
+          provider: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          model_id: string
+          name: string
+          provider: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          model_id?: string
+          name?: string
+          provider?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
