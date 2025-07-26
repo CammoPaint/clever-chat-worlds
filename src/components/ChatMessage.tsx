@@ -1,6 +1,7 @@
 import { Bot, User, Copy, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 interface ChatMessageProps {
   message: {
@@ -55,9 +56,17 @@ export function ChatMessage({ message }: ChatMessageProps) {
         </div>
         
         <div className="prose prose-invert max-w-none">
-          <p className="text-foreground whitespace-pre-wrap leading-relaxed">
-            {message.content}
-          </p>
+          {isUser ? (
+            <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+              {message.content}
+            </p>
+          ) : (
+            <div className="text-foreground leading-relaxed">
+              <ReactMarkdown>
+                {message.content}
+              </ReactMarkdown>
+            </div>
+          )}
         </div>
 
         {/* Message actions */}
