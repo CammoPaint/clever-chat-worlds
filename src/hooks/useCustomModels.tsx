@@ -70,6 +70,40 @@ export function useCustomModels() {
     }
   };
 
+  const updateCustomModel = async (id: string, updates: Omit<CustomModel, 'id'>) => {
+    if (!user) {
+      toast.error('You must be logged in to update custom models');
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('custom_models')
+        .update({
+          name: updates.name,
+          model_id: updates.model_id,
+          provider: updates.provider,
+          description: updates.description,
+        })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCustomModels(prev => 
+        prev.map(model => model.id === id ? data : model)
+      );
+      toast.success('Custom model updated successfully');
+      return true;
+    } catch (error) {
+      console.error('Error updating custom model:', error);
+      toast.error('Failed to update custom model');
+      return false;
+    }
+  };
+
   const deleteCustomModel = async (id: string) => {
     try {
       const { error } = await supabase
@@ -95,6 +129,7 @@ export function useCustomModels() {
     customModels,
     isLoading,
     addCustomModel,
+    updateCustomModel,
     deleteCustomModel,
     loadCustomModels,
   };

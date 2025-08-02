@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Key, Cpu, Save, ArrowLeft, Trash2, Plus } from 'lucide-react';
+import { Settings, Key, Cpu, Save, ArrowLeft, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCustomModels } from '@/hooks/useCustomModels';
 import { AddCustomModelDialog } from '@/components/AddCustomModelDialog';
+import { EditCustomModelDialog } from '@/components/EditCustomModelDialog';
 
 interface Model {
   id: string;
@@ -29,6 +30,7 @@ export const SettingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { customModels, isLoading: customModelsLoading, deleteCustomModel } = useCustomModels();
+  const [editingModel, setEditingModel] = useState<any>(null);
 
   useEffect(() => {
     if (user) {
@@ -306,7 +308,8 @@ export const SettingsPage = () => {
                   {customModels.map((model) => (
                     <div 
                       key={model.id} 
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+                      onClick={() => setEditingModel(model)}
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -327,14 +330,6 @@ export const SettingsPage = () => {
                           {model.model_id}
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteCustomModel(model.id)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   ))}
                 </div>
@@ -414,6 +409,15 @@ export const SettingsPage = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Edit Custom Model Dialog */}
+        {editingModel && (
+          <EditCustomModelDialog
+            model={editingModel}
+            open={!!editingModel}
+            onOpenChange={(open) => !open && setEditingModel(null)}
+          />
+        )}
       </div>
     </div>
   );
