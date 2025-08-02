@@ -7,9 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Key, Cpu, Save, ArrowLeft } from 'lucide-react';
+import { Settings, Key, Cpu, Save, ArrowLeft, Trash2, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
+import { useCustomModels } from '@/hooks/useCustomModels';
+import { AddCustomModelDialog } from '@/components/AddCustomModelDialog';
 
 interface Model {
   id: string;
@@ -26,6 +28,7 @@ export const SettingsPage = () => {
   const [models, setModels] = useState<Model[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const { customModels, isLoading: customModelsLoading, deleteCustomModel } = useCustomModels();
 
   useEffect(() => {
     if (user) {
@@ -251,6 +254,91 @@ export const SettingsPage = () => {
                   {isLoading ? 'Testing...' : 'Test Connection'}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          <Separator />
+
+          {/* Custom Models Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Cpu className="h-5 w-5" />
+                  Your Custom Models
+                </div>
+                <AddCustomModelDialog
+                  trigger={
+                    <Button size="sm" className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Add Custom Model
+                    </Button>
+                  }
+                />
+              </CardTitle>
+              <CardDescription>
+                Manage your custom AI models
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {customModelsLoading ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  Loading custom models...
+                </div>
+              ) : customModels.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Cpu className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No custom models yet</p>
+                  <p className="text-sm mb-4">
+                    Add your own AI models to expand your options
+                  </p>
+                  <AddCustomModelDialog
+                    trigger={
+                      <Button className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Your First Model
+                      </Button>
+                    }
+                  />
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {customModels.map((model) => (
+                    <div 
+                      key={model.id} 
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-medium">{model.name}</h3>
+                          <Badge variant="secondary" className="text-xs">
+                            {model.provider}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Custom
+                          </Badge>
+                        </div>
+                        {model.description && (
+                          <p className="text-sm text-muted-foreground mb-1">
+                            {model.description}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {model.model_id}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteCustomModel(model.id)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
