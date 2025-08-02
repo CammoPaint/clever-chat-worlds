@@ -48,7 +48,7 @@ export function ChatArea({ onToggleSidebar, currentThread, onThreadUpdate }: Cha
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const { sendMessage: sendOpenRouterMessage, isLoading } = useOpenRouter();
   const { messages, saveMessage } = useMessages(currentThread?.id || null);
-  const { updateThread, deleteThread } = useThreads();
+  const { updateThread, deleteThread, createThread } = useThreads();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -92,9 +92,24 @@ export function ChatArea({ onToggleSidebar, currentThread, onThreadUpdate }: Cha
   };
 
   const handleSendMessage = async (content: string) => {
-    if (!currentThread) {
-      toast.error('Please select or create a conversation first');
-      return;
+    let threadToUse = currentThread;
+    
+    // If no current thread exists, create a new one automatically
+    if (!threadToUse) {
+      // Generate a title from the first few words of the message
+      const title = content.length > 50 
+        ? content.substring(0, 47) + '...' 
+        : content || 'New Conversation';
+      
+      threadToUse = await createThread(title);
+      
+      if (!threadToUse) {
+        toast.error('Failed to create conversation');
+        return;
+      }
+      
+      // Notify parent to update the thread list and set current thread
+      onThreadUpdate?.();
     }
 
     try {
@@ -120,7 +135,7 @@ export function ChatArea({ onToggleSidebar, currentThread, onThreadUpdate }: Cha
       await saveMessage(responseContent, 'assistant', selectedModel);
       
       // Update thread's updated_at timestamp
-      await updateThread(currentThread.id, { updated_at: new Date().toISOString() });
+      await updateThread(threadToUse.id, { updated_at: new Date().toISOString() });
       onThreadUpdate?.();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -196,7 +211,7 @@ export function ChatArea({ onToggleSidebar, currentThread, onThreadUpdate }: Cha
                   Welcome to Chat Worlds
                 </h2>
                 <p className="text-muted-foreground mb-6">
-                  Start a conversation with your chosen AI model. Ask questions, get help with code, brainstorm ideas, or just chat!
+                  Start typing your message below to begin a new conversation with your chosen AI model. Ask questions, get help with code, brainstorm ideas, or just chat!
                 </p>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="p-3 bg-card rounded-lg border border-border">
@@ -260,6 +275,7 @@ export function ChatArea({ onToggleSidebar, currentThread, onThreadUpdate }: Cha
       <ChatInput 
         onSendMessage={handleSendMessage} 
         isLoading={isLoading}
+        disabled={false}
       />
 
       {/* Rename Thread Dialog */}
